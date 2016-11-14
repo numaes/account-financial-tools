@@ -19,24 +19,21 @@
 #
 ##############################################################################
 {
-    "name": "Account Move helper",
-    "version": "8.0.0.0.0",
+    'name': 'Account Move helper',
+    'version': '9.0.1.0.0',
     'author': 'ADHOC SA',
     'website': 'www.adhoc.com.ar',
     'license': 'AGPL-3',
-    "category": "Accounting",
-    "description": """ 
-Account Move helper
-===================
-    """,
+    'category': 'Accounting',
     'depends': [
-                'account',
+        'account',
     ],
     'data': [
         'view/account_view.xml',
         'view/res_partner_view.xml',
+        'view/res_company_view.xml',
     ],
     'demo': [],
     'test': [],
-    'installable': False,
+    'installable': True,
 }

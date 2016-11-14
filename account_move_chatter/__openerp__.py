@@ -19,16 +19,12 @@
 #
 ##############################################################################
 {
-    "name": "Account Move Chatter",
-    "version": "8.0.0.0.0",
+    'name': 'Account Move Chatter',
+    'version': '9.0.1.0.0',
     'author': 'ADHOC SA',
     'website': 'www.adhoc.com.ar',
     'license': 'AGPL-3',
-    "category": "Accounting",
-    "description": """ 
-Account Move Chatter
-====================
-    """,
+    'category': 'Accounting',
     'depends': [
                 'account',
     ],
@@ -37,7 +33,7 @@ Account Move Chatter
     ],
     'demo': [],
     'test': [],
-    'installable': False,
+    'installable': True,
     'auto_install': False,
     'application': False,
 }

@@ -20,37 +20,29 @@
 ##############################################################################
 {
     'name': 'Account Debt Management',
-    'version': '8.0.0.0.0',
-    'description': """
-Account Debt Management
-=======================
-It adds new ways to see partner debt:
-
-* Two new tabs (customer debt / supplier debt) on partner form showing the
-detail of all unreconciled lines with amount on currencies, financial amount
-and cumulative amounts
-* New button from partner to display all the history for a partner
-* ADd partner balance
-""",
+    'version': '9.0.1.0.0',
     'category': 'Account Reporting',
     'author': 'ADHOC SA',
     'website': 'www.adhoc.com.ar',
     'license': 'AGPL-3',
     'depends': [
-        'account',
-        ],
+        'account_full_reconcile',
+        'report_aeroo',
+    ],
     'data': [
-        # 'wizard/account_summary_wizard_view.xml',
-        # 'report/account_summary_report.xml'
-        'report/account_debt_summary_view.xml',
+        'report/account_debt_report.xml',
+        'report/account_debt_line_view.xml',
+        'data/mail_data.xml',
+        'wizard/account_debt_report_wizard_view.xml',
         'views/account_move_line_view.xml',
         'views/res_partner_view.xml',
+        'res_config_view.xml',
         'security/ir.model.access.csv',
-        ],
+        'security/security.xml',
+    ],
     'demo': [
-        ],
+    ],
     'test': [
-        ],
-    'installable': False,
+    ],
+    'installable': True,
 }
-# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
