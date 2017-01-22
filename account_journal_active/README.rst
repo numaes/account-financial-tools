@@ -6,8 +6,7 @@
 Account Journal Active
 ======================
 
-This module extends the functionality of account to support ...
-and to allow you to deactivate journals you don't want to use it anymore
+This module allows you to deactivate journals you don't want to use anymore. Only journals become invisible by default, all the related objets (invoices, payments, entryes) are still visible.
 
 Installation
 ============

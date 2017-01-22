@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from openerp import fields, models, api, _
-from openerp.exceptions import UserError
+from openerp.exceptions import ValidationError
+import logging
+_logger = logging.getLogger(__name__)
 
 
 class AccountJournalDocumentType(models.Model):
@@ -98,7 +100,7 @@ class AccountJournal(models.Model):
         if self.type in ['purchase', 'sale']:
             internal_types = ['invoice', 'debit_note', 'credit_note']
         else:
-            raise UserError(_('Type %s not implemented yet' % self.type))
+            raise ValidationError(_('Type %s not implemented yet' % self.type))
 
         document_types = self.env['account.document.type'].search([
             ('internal_type', 'in', internal_types),
@@ -134,3 +136,73 @@ class AccountJournal(models.Model):
             })
             sequence += 10
         return True
+
+    @api.model
+    def merge_journals(
+            self, from_journal, to_journal, delete_from=True,
+            do_not_raise=True):
+        cr = self.env.cr
+        if from_journal.type not in ['sale', 'purchase']:
+            raise ValidationError(_(
+                'Only sale or purchase journals can be merged'))
+        if from_journal.type != to_journal.type:
+            raise ValidationError(_(
+                'Journals Must be of the same type'))
+
+        if from_journal.company_id != to_journal.company_id:
+            raise ValidationError(_(
+                'Journals Must be of the same company'))
+
+        if from_journal == to_journal:
+            raise ValidationError(_(
+                'Journals can not be the same'))
+
+        def get_repeated_types(from_journal, to_journal):
+            from_types = from_journal.journal_document_type_ids.mapped(
+                'document_type_id')
+            to_types = to_journal.journal_document_type_ids.mapped(
+                'document_type_id')
+            return from_types & to_types
+        repeated_types = get_repeated_types(from_journal, to_journal)
+
+        rep_journal_docs = self.env['account.journal.document.type'].search([
+            ('journal_id', 'in', [from_journal.id, to_journal.id]),
+            ('document_type_id', 'in', repeated_types.ids)])
+        for rep_journal_doc in rep_journal_docs:
+            try:
+                rep_journal_doc.unlink()
+                rep_journal_doc._cr.commit()
+            except:
+                # TODO mejorar log que nos daba error
+                _logger.info('Could not unlink doc type')
+
+        # TODO mejorar y tratar de evitar esto
+        self._cr.commit()
+        from_journal.invalidate_cache()
+        to_journal.invalidate_cache()
+        repeated_types = get_repeated_types(from_journal, to_journal)
+
+        if repeated_types:
+            msg = (
+                'Could not merge journal %s into journal %s because we could '
+                'not delete the following repeated types: %s' % (
+                    from_journal.name, to_journal.name,
+                    repeated_types.mapped('name')))
+            if do_not_raise:
+                _logger.warning(msg)
+            else:
+                raise ValidationError(msg)
+
+        tables = [
+            'account_move', 'account_move_line', 'account_invoice',
+            'account_journal_document_type']
+        for table in tables:
+            cr.execute("""
+                UPDATE
+                    %s
+                SET
+                    journal_id=%s
+                WHERE journal_id = %s
+                """ % (table, to_journal.id, from_journal.id))
+        if delete_from:
+            from_journal.unlink()

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from openerp import tools
 from openerp import models, fields, api
-import openerp.addons.decimal_precision as dp
 
 
 class AccountDebtLine(models.Model):
@@ -32,8 +31,14 @@ class AccountDebtLine(models.Model):
         'Reference',
         readonly=True
     )
-    amount = fields.Float(
-        readonly=True
+    amount = fields.Monetary(
+        readonly=True,
+        currency_field='company_currency_id',
+    )
+    amount_residual = fields.Monetary(
+        readonly=True,
+        string='Residual Amount',
+        currency_field='company_currency_id',
     )
     currency_id = fields.Many2one(
         'res.currency',
@@ -45,9 +50,14 @@ class AccountDebtLine(models.Model):
         'Commercial',
         readonly=True
     )
-    amount_currency = fields.Float(
-        digits_compute=dp.get_precision('Account'),
-        readonly=True
+    amount_currency = fields.Monetary(
+        readonly=True,
+        currency_field='currency_id',
+    )
+    amount_residual_currency = fields.Monetary(
+        readonly=True,
+        string='Residual Amount in Currency',
+        currency_field='currency_id',
     )
     move_id = fields.Many2one(
         'account.move',
@@ -83,6 +93,8 @@ class AccountDebtLine(models.Model):
         [('draft', 'Unposted'), ('posted', 'Posted')],
         'Status',
         readonly=True
+    )
+    reconciled = fields.Boolean(
     )
     full_reconcile_id = fields.Many2one(
         'account.full.reconcile',
@@ -125,15 +137,27 @@ class AccountDebtLine(models.Model):
     display_name = fields.Char(
         compute='get_display_name'
     )
-    financial_amount = fields.Float(
-        compute='_get_amounts',
+    financial_amount = fields.Monetary(
+        related='move_line_id.financial_amount',
+        # compute='_get_amounts',
+        currency_field='company_currency_id',
     )
-    balance = fields.Float(
-        compute='_get_amounts',
+    # balance = fields.Monetary(
+    #     compute='_get_amounts',
+    #     currency_field='company_currency_id',
+    # )
+    financial_amount_residual = fields.Monetary(
+        related='move_line_id.financial_amount_residual',
+        currency_field='company_currency_id',
     )
-    financial_balance = fields.Float(
-        compute='_get_amounts',
-    )
+    # financial_amount_residual = fields.Monetary(
+    #     compute='_get_amounts',
+    #     currency_field='company_currency_id',
+    # )
+    # financial_balance = fields.Monetary(
+    #     compute='_get_amounts',
+    #     currency_field='company_currency_id',
+    # )
     company_currency_id = fields.Many2one(
         related='company_id.currency_id',
         readonly=True,
@@ -160,27 +184,33 @@ class AccountDebtLine(models.Model):
             display_name = '%s (%s)' % (display_name, ref)
         self.display_name = display_name
 
-    @api.multi
-    @api.depends('amount', 'amount_currency')
-    def _get_amounts(self):
-        """
-        If debt_together in context then we discount payables and make
-        cumulative all together
-        """
-        balance = 0.0
-        financial_balance = 0.0
-        # we need to reorder records
-        # for line in reversed(self.search(
-        #         [('id', 'in', self.ids)], order=self._order)):
-        for line in self.search([('id', 'in', self.ids)], order=self._order):
-            balance += line.amount
-            line.balance = balance
-            financial_amount = line.currency_id and line.currency_id.compute(
-                line.amount_currency,
-                line.company_id.currency_id) or line.amount
-            line.financial_amount = financial_amount
-            financial_balance += financial_amount
-            line.financial_balance = financial_balance
+    # @api.multi
+    # @api.depends('amount_residual_currency')
+    # # @api.depends('amount', 'amount_currency')
+    # def _get_amounts(self):
+    #     """
+    #     If debt_together in context then we discount payables and make
+    #     cumulative all together
+    #     """
+    #     balance = 0.0
+    #     financial_balance = 0.0
+    #     # we need to reorder records
+    #     # for line in reversed(self.search(
+    #     #         [('id', 'in', self.ids)], order=self._order)):
+    #     for line in self.search([('id', 'in', self.ids)], order=self._order):
+    #         balance += line.amount
+    #         line.balance = balance
+    #         financial_amount = line.currency_id and line.currency_id.compute(
+    #             line.amount_currency,
+    #             line.company_id.currency_id) or line.amount
+    #         financial_amount_residual = (
+    #             line.currency_id and line.currency_id.compute(
+    #                 line.amount_residual_currency,
+    #                 line.company_id.currency_id) or line.amount_residual)
+    #         line.financial_amount = financial_amount
+    #         financial_balance += financial_amount
+    #         line.financial_balance = financial_balance
+    #         line.financial_amount_residual = financial_amount_residual
 
     def init(self, cr):
         tools.drop_view_if_exists(cr, self._table)
@@ -193,6 +223,7 @@ class AccountDebtLine(models.Model):
                 am.ref as ref,
                 am.state as move_state,
                 l.full_reconcile_id as full_reconcile_id,
+                l.reconciled as reconciled,
                 -- l.reconcile_partial_id as reconcile_partial_id,
                 l.move_id as move_id,
                 l.partner_id as partner_id,
@@ -206,8 +237,11 @@ class AccountDebtLine(models.Model):
                 a.user_type_id as account_type,
                 l.currency_id as currency_id,
                 l.amount_currency as amount_currency,
+                l.amount_residual_currency as amount_residual_currency,
+                l.amount_residual as amount_residual,
                 pa.user_id as user_id,
-                coalesce(l.debit, 0.0) - coalesce(l.credit, 0.0) as amount
+                l.balance as amount
+                -- coalesce(l.debit, 0.0) - coalesce(l.credit, 0.0) as amount
             FROM
                 account_move_line l
                 left join account_account a on (l.account_id = a.id)
@@ -224,23 +258,24 @@ class AccountDebtLine(models.Model):
     @api.multi
     def action_open_related_document(self):
         self.ensure_one()
-        domain = [
-            ('move_id', '=', self.move_id.id),
-        ]
         view_id = False
         # TODO ver si queremos devolver lista si hay mas de uno
-        record = self.env['account.invoice'].search(domain, limit=1)
+        record = self.env['account.invoice'].search(
+            [('move_id', '=', self.move_id.id)], limit=1)
         if not record:
-            record = self.env['account.voucher'].search(domain, limit=1)
+            record = self.env['account.payment'].search(
+                [('move_line_ids', '=', self.id)], limit=1)
             if record:
-                if record.type == 'receipt':
-                    view_id = self.env['ir.model.data'].xmlid_to_res_id(
-                        'account_voucher.view_vendor_receipt_form')
-                elif record.type == 'payment':
-                    view_id = self.env['ir.model.data'].xmlid_to_res_id(
-                        'account_voucher.view_vendor_payment_form')
+                view_id = self.env['ir.model.data'].xmlid_to_res_id(
+                    'account.view_account_payment_form')
             else:
                 record = self.move_id
+        else:
+            # if invoice, we choose right view
+            if record.type in ['in_refund', 'in_invoice']:
+                view_id = self.env.ref('account.invoice_supplier_form').id
+            else:
+                view_id = self.env.ref('account.invoice_form').id
 
         return {
             'type': 'ir.actions.act_window',

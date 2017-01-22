@@ -9,13 +9,15 @@ from openerp import api, models, fields
 class AccountMoveLine(models.Model):
     _inherit = 'account.move.line'
 
-    financial_amount_residual = fields.Float(
+    financial_amount_residual = fields.Monetary(
         compute='_get_financial_amounts',
         string='Residual Financial Amount',
+        currency_field='company_currency_id',
     )
-    financial_amount = fields.Float(
+    financial_amount = fields.Monetary(
         compute='_get_financial_amounts',
         string='Financial Amount',
+        currency_field='company_currency_id',
     )
 
     @api.multi
@@ -26,11 +28,11 @@ class AccountMoveLine(models.Model):
                 line.currency_id and line.currency_id.compute(
                     line.amount_currency,
                     line.account_id.company_id.currency_id) or (
-                    line.debit - line.credit))
+                    line.balance))
             financial_amount_residual = (
                 line.currency_id and line.currency_id.compute(
                     line.amount_residual_currency,
                     line.account_id.company_id.currency_id) or
-                line.amount_residual_currency)
+                line.amount_residual)
             line.financial_amount = financial_amount
             line.financial_amount_residual = financial_amount_residual

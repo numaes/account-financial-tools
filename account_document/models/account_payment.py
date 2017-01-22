@@ -4,13 +4,27 @@
 # directory
 ##############################################################################
 from openerp import models, fields, api, _
-from openerp.exceptions import UserError
+from openerp.exceptions import UserError, ValidationError
+from openerp.osv import expression
 import logging
 _logger = logging.getLogger(__name__)
 
 
 class AccountPayment(models.Model):
+    """
+    about name_get and display name:
+    * in this model there name_get and name_search are the defaults and use
+    name record
+    * we add display_name computed field with search funcion and we se it as
+    _rec_name fields so it is used on m2o fields
+
+    Acccoding this https://www.odoo.com/es_ES/forum/ayuda-1/question/
+    how-to-override-name-get-method-in-new-api-61228
+    we should modify name_get, but this way we change name_get and with
+    _rec_name we are changing _name_get
+    """
     _inherit = "account.payment"
+    _rec_name = "display_name"
 
     # document_number = fields.Char(
     #     string=_('Document Number'),
@@ -69,9 +83,20 @@ class AccountPayment(models.Model):
         string='Next Number',
     )
     display_name = fields.Char(
-        compute='_get_display_name',
+        compute='_compute_display_name',
+        search='_search_display_name',
         string='Document Reference',
     )
+
+    @api.model
+    def _search_display_name(self, operator, operand):
+        domain = [
+            '|',
+            ('document_number', operator, operand),
+            ('name', operator, operand)]
+        if operator in expression.NEGATIVE_TERM_OPERATORS:
+            domain = ['&', '!'] + domain[1:]
+        return domain
 
     @api.multi
     @api.depends(
@@ -109,7 +134,7 @@ class AccountPayment(models.Model):
         'document_number',
         'document_type_id.doc_code_prefix'
     )
-    def _get_display_name(self):
+    def _compute_display_name(self):
         """
         * If document number and document type, we show them
         * Else, we show name
@@ -124,26 +149,31 @@ class AccountPayment(models.Model):
             display_name = self.name
         self.display_name = display_name
 
-    _sql_constraints = [
-        ('name_uniq', 'unique(document_number, receiptbook_id)',
-            'Document number must be unique per receiptbook!')]
+    # TODO esta constraint si la creamos hay que borrarla en
+    # account_payment_group_document
+    # _sql_constraints = [
+    #     ('document_number_uniq', 'unique(document_number, receiptbook_id)',
+    #         'Document number must be unique per receiptbook!')]
 
     @api.one
-    @api.constrains('company_id')
-    @api.onchange('company_id')
-    def _change_company(self):
+    @api.constrains('company_id', 'partner_type')
+    def _force_receiptbook(self):
         # we add cosntrins to fix odoo tests and also help in inmpo of data
         if not self.receiptbook_id:
             self.receiptbook_id = self._get_receiptbook()
 
+    @api.onchange('company_id', 'partner_type')
+    def get_receiptbook(self):
+        self.receiptbook_id = self._get_receiptbook()
+
     @api.multi
     def _get_receiptbook(self):
         self.ensure_one()
-        payment_type = self.payment_type or self._context.get(
-            'payment_type', self._context.get('default_payment_type', False))
+        partner_type = self.partner_type or self._context.get(
+            'partner_type', self._context.get('default_partner_type', False))
         receiptbook = self.env[
             'account.payment.receiptbook'].search([
-                ('payment_type', '=', payment_type),
+                ('partner_type', '=', partner_type),
                 ('company_id', '=', self.company_id.id),
             ], limit=1)
         return receiptbook
@@ -177,6 +207,6 @@ class AccountPayment(models.Model):
         """
         if (self.receiptbook_id and
                 self.receiptbook_id.company_id != self.company_id):
-            raise Warning(_(
+            raise ValidationError(_(
                 'The company of the receiptbook and of the '
                 'payment must be the same!'))

@@ -6,12 +6,10 @@
 from openerp import models, fields
 
 
-class ResCompany(models.Model):
-    _inherit = "res.company"
+class AccountPaymentTerm(models.Model):
+    _inherit = 'account.payment.term'
 
-    helper_account_id = fields.Many2one(
-        'account.account',
-        domain=[('deprecated', '=', False), ('reconcile', '=', False)],
-        string="Helper Counterpart Account",
-        help="Counterpart account on Journal Entries helper"
+    company_id = fields.Many2one(
+        default=False,
+        required=False
     )
