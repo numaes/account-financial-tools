@@ -3,14 +3,38 @@
 # * multi_store
 # 
 # Translators:
+# Alexandra Guibal <guibal.alexandra@gmail.com>, 2015
+# Ayla Reith <areith@dimagi.com>, 2015
+# Carla Legros <clegros@dimagi.com>, 2015
+# Claire_Cravero <ccravero@dimagi.com>, 2014
+# Claire O'Grady <cogrady@dimagi.com>, 2015
+# Derek Hans <dhans@dimagi.com>, 2015
+# Dimagi Dev <devops@dimagi.com>, 2016
+# djindag <djindalaure@gmail.com>, 2015
+# esoergel, 2016
+# fatim thiam <fthiam@dimagi.com>, 2015
+# Fiorenzo Conte <fconte@dimagi.com>, 2015
+# Guillaume Deflaux <gdf@tdh.ch>, 2015
+# Hotellook, 2014
+# Ismaila Diene <idiene@dimagi.com>, 2015
+# Kelly Adediha <kadediha@dimagi.com>, 2015
+# Marco Horta <mhorta@dimagi.com>, 2015
+# modonnell <modonnell@dimagi.com>, 2014
+# Mohini Bhavsar <mbhavsar@dimagi.com>, 2015
+# Nathaniel Haduch <nhaduch@dimagi.com>, 2015
+# patrick keating <pkeating@dimagi.com>, 2015
+# Roland Kyedrebeogo <rkyedrebeogo@dimagi.com>, 2015
+# Rowena Luk <rluk@dimagi.com>, 2015
+# Sarah Sagan <ssagan@dimagi.com>, 2015
+# Tyler Wymer <twymer@dimagi.com>, 2014
 msgid ""
 msgstr ""
-"Project-Id-Version: odoo-addons (8.0)\n"
+"Project-Id-Version: account-financial-tools (8.0)\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-01-05 13:55+0000\n"
-"PO-Revision-Date: 2015-09-01 18:01+0000\n"
-"Last-Translator: <>\n"
-"Language-Team: Mongolian (http://www.transifex.com/adhoc/ingadhoc-odoo-addons-8-0/language/mn/)\n"
+"POT-Creation-Date: 2016-09-27 16:01+0000\n"
+"PO-Revision-Date: 2016-03-01 20:12+0000\n"
+"Last-Translator: Juan José Scarafía <scarafia.juanjose@gmail.com>\n"
+"Language-Team: Mongolian (http://www.transifex.com/adhoc/ingadhoc-account-financial-tools-8-0/language/mn/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
@@ -53,6 +77,11 @@ msgid "Created on"
 msgstr ""
 
 #. module: multi_store
+#: field:res.store,display_name:0
+msgid "Display Name"
+msgstr ""
+
+#. module: multi_store
 #: constraint:res.store:0
 msgid "Error! You can not create recursive stores."
 msgstr ""
@@ -70,6 +99,11 @@ msgstr ""
 #. module: multi_store
 #: field:res.store,journal_ids:0
 msgid "Journals"
+msgstr ""
+
+#. module: multi_store
+#: field:res.store,__last_update:0
+msgid "Last Modified on"
 msgstr ""
 
 #. module: multi_store

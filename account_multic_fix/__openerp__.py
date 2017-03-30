@@ -19,12 +19,13 @@
 #
 ##############################################################################
 {
-    'author':  'ADHOC SA',
+    'author': 'ADHOC SA',
     'website': 'www.adhoc.com.ar',
     'license': 'AGPL-3',
     'category': 'Accounting & Finance',
     'data': [
         'security/rule.xml',
+        'views/account_move_view.xml',
         'wizard/account_move_line_reconcile_writeoff_view.xml',
         'wizard/account_statement_from_invoice_view.xml',
     ],
@@ -40,4 +41,4 @@ Account Multi Company Fixes
     'installable': True,
     'name': 'Account Multi Company Fixes',
     'test': [],
-    'version': '8.0.1.4.1'}
+    'version': '8.0.1.5.0'}

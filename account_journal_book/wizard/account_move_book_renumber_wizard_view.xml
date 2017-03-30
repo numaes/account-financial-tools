@@ -12,11 +12,15 @@
                     <p>Posted moves from those journals will be sorted by date and then assigned sequential numbers using choosed sequence.</p>
                     <group string="General Data">
                         <field name="company_id"/>
+                        <field name="fiscalyear_id"/>
                         <field name="numbering_order"/>
                         <field name="sequence_id"/>
                         <field name="number_next"/>
                     </group>
                     <notebook>
+                        <page string="Grouped Journals">
+                            <field name="grouped_journal_ids"/>
+                        </page>
                         <page string="Periods">
                             <field name="period_ids" editable="top"/>
                         </page>

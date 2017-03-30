@@ -14,6 +14,7 @@ class account_transfer(models.Model):
     _description = "account.transfer"
     _inherit = ['mail.thread']
     _rec_name = 'ref'
+    _order = 'date desc, id desc'
 
     ref = fields.Char(
         'Reference',
@@ -76,11 +77,13 @@ class account_transfer(models.Model):
         'account.move',
         'Source Move',
         readonly=True,
+        copy=False,
         )
     target_move_id = fields.Many2one(
         'account.move',
         'Target Move',
         readonly=True,
+        copy=False,
         )
     state = fields.Selection([
         ('draft', 'Draft'),
@@ -137,9 +140,11 @@ class account_transfer(models.Model):
 
         # create source move
         source_move = self.source_move_id.create(self.get_move_vals('source'))
+        source_move.post()
 
         # create target move
         target_move = self.target_move_id.create(self.get_move_vals('target'))
+        target_move.post()
 
         self.write({
             'target_move_id': target_move.id,
@@ -203,3 +208,11 @@ class account_transfer(models.Model):
         self.source_move_id.unlink()
         self.target_move_id.unlink()
         self.state = 'cancel'
+
+    @api.multi
+    def unlink(self):
+        for rec in self:
+            if self.state != 'draft':
+                raise Warning(_(
+                    "You can't delete a transfer that is not in draft"))
+        return super(account_transfer, self).unlink()
