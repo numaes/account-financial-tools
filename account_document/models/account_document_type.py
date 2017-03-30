@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from openerp import fields, models, api
-from openerp.addons.account_document.models.res_company import ResCompany
-# from openerp.exceptions import UserError
+from odoo import fields, models, api
+# from odoo.exceptions import UserError
 
 
 class AccountDocmentType(models.Model):
@@ -9,17 +8,16 @@ class AccountDocmentType(models.Model):
     _description = 'Account Document Type'
     _order = 'sequence, id asc'
 
-    # _get_localizations = (
-    #     lambda self, *args, **kwargs: self.env[
-    #         'res.company']._get_localizations(*args, **kwargs))
+    _get_localizations = (
+        lambda self, *args, **kwargs: self.env[
+            'res.company']._get_localizations(*args, **kwargs))
 
     sequence = fields.Integer(
         default=10,
         required=True,
     )
     localization = fields.Selection(
-        # _get_localizations,
-        ResCompany._localization_selection,
+        _get_localizations,
         'Localization',
         help='If you set a localization here then it will be available only '
         'for companies of this localization',
@@ -54,10 +52,8 @@ class AccountDocmentType(models.Model):
         ('credit_note', 'Credit Notes'),
         ('ticket', 'Ticket'),
         ('receipt_invoice', 'Receipt Invoice'),
-        ('customer_payment', 'Customer Voucer'),
-        ('supplier_payment', 'Supplier Invoice'),
-        # ('inbound_payment_voucher', 'Inbound Payment Voucer'),
-        # ('outbound_payment_voucher', 'Outbound Payment Voucer'),
+        ('inbound_payment_voucher', 'Inbound Payment Voucer'),
+        ('outbound_payment_voucher', 'Outbound Payment Voucer'),
         ('in_document', 'In Document'),
     ],
         string='Internal Type',

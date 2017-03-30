@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
-# For copyright and license notices, see __openerp__.py file in module root
+# For copyright and license notices, see __odoo__.py file in module root
 # directory
 ##############################################################################
-from openerp import api, fields, models, _
-from openerp.exceptions import ValidationError
+from odoo import api, fields, models, _
+from odoo.exceptions import Warning
 
 
 class account_debt_report_wizard(models.TransientModel):
@@ -51,7 +51,7 @@ class account_debt_report_wizard(models.TransientModel):
     @api.constrains
     def check_company_type(self):
         if self.company_type == 'consolidate' and self.company_id:
-            raise ValidationError(_(
+            raise Warning(_(
                 'You can only select "Consolidate all Companies if no company '
                 'is selected'))
 

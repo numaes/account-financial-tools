@@ -8,8 +8,13 @@ model_renames = [
     # a account_document
     ('afip.document_class', 'account.document.type'),
     ('account.journal.afip_document_class', 'account.journal.document.type'),
+    # a l10n_ar_account
     ('afip.document_letter', 'account.document.letter'),
     ('afip.responsability', 'afip.responsability.type'),
+    # a l10n_ar_partner
+    ('afip.document_type', 'res.partner.id_category'),
+    # modelos renombrados en l10n_ar_account_voucher
+    # a l10n_ar_account
     ('account.voucher.receiptbook', 'account.payment.receiptbook'),
 ]
 
@@ -18,14 +23,13 @@ table_renames = [
     ('account_journal_afip_document_class', 'account_journal_document_type'),
     ('afip_document_letter', 'account_document_letter'),
     ('afip_responsability', 'afip_responsability_type'),
-    ('account_voucher_receiptbook', 'account_payment_receiptbook'),
+    ('afip_document_type', 'res_partner_id_category'),
     # m2m fields
     ('afip_doc_letter_issuer_rel',
         'account_doc_let_responsability_issuer_rel'),
     ('afip_doc_letter_receptor_rel',
         'account_doc_let_responsability_receptor_rel'),
-    ('res_partner_afip_doc_class_rel',
-        'res_partner_document_type_rel'),
+    ('account_voucher_receiptbook', 'account_payment_receiptbook'),
 ]
 
 # campos renombrados en l10n_ar_invoice
@@ -36,21 +40,18 @@ column_renames = {
     'account_doc_let_responsability_receptor_rel': [
         ('responsability_id', 'afip_responsability_type_id'),
     ],
-    'res_partner_document_type_rel': [
-        ('document_class_id', 'document_type_id'),
-    ],
     'account_document_type': [
         ('afip_code', 'code'),
         ('document_type', 'internal_type'),
     ],
     'res_partner': [
+        ('document_type_id', 'main_id_category_id'),
         ('responsability_id', 'afip_responsability_type_id'),
     ],
     'account_invoice': [
         ('journal_document_class_id', 'journal_document_type_id'),
         ('afip_document_class_id', 'document_type_id'),
         ('afip_document_number', 'document_number'),
-        ('responsability_id', 'afip_responsability_type_id'),
     ],
     'account_move': [
         ('document_class_id', 'document_type_id'),
@@ -62,43 +63,22 @@ column_renames = {
         ('afip_document_class_id', 'document_type_id'),
     ],
     'account_payment_receiptbook': [
-        # ('type', 'partner_type'),
+        ('type', 'payment_type'),
         ('manual_prefix', 'prefix'),
         ('document_class_id', 'document_type_id'),
     ],
 }
 
-# column_copies = {
-#     'account_payment_receiptbook': [
-#         ('type', None, None),
-#     ],
-# }
 
+@openupgrade.migrate()
+def migrate(cr, version):
 
-# def delete_invoice_views(cr):
-#     """
-#     We delete this views that are not deleted automatically and raise an
-#     error if we still find some erros we can delete all views by enable
-#     remove_views of pre-migration of base 9.0.1.4
-#     """
-#     openupgrade.logged_query(cr, """
-#         DELETE from ir_ui_view iv
-#         USING ir_model_data d WHERE iv.id=d.res_id
-#         and d.name in (
-#             'view_invoice_supplier_payment_doc_number_form',
-#             'view_invoice_payment_doc_number_form',
-#             'view_move_line_form',
-#             'view_account_move_line_filter',
-#             'view_move_line_tree',
-#             'view_res_partner_form',
-#             'view_res_partner_filter',
-#             'view_res_partner_tree',
-#             'view_partner_form',
-#             'view_company_inherit_form',
-#             'view_account_journal_ar_form')
-#         and d.module in ('account_document','l10n_ar_padron_afip')
-#         """,)
-#     # view_partner_form is from l10n_ar_padron_afip
+    openupgrade.rename_models(cr, model_renames)
+    openupgrade.rename_tables(cr, table_renames)
+    openupgrade.rename_columns(cr, column_renames)
+    fix_data_on_l10n_ar_account(cr)
+    fix_data_on_l10n_ar_partner(cr)
+    delete_payment_views(cr)
 
 
 def delete_payment_views(cr):
@@ -114,66 +94,24 @@ def delete_payment_views(cr):
     )
 
 
-@openupgrade.migrate()
-def migrate(cr, version):
-    # muchos errores en invoice_views, borramos todo con remove_views en
-    # base upgrade 9.0.1.4
-    # delete_invoice_views(cr)
-    # delete_payment_views(cr)
-    openupgrade.rename_models(cr, model_renames)
-    openupgrade.rename_tables(cr, table_renames)
-    # openupgrade.copy_columns(cr, column_copies)
-    openupgrade.rename_columns(cr, column_renames)
-    fix_data_on_l10n_ar_account(cr)
-    fix_data_of_l10n_ar_account_voucher(cr)
-    # TODO si mantenemos lo de borrar todo no haria falta
-
-
-def fix_data_of_l10n_ar_account_voucher(cr):
-    """
-    Some modes where from l10n_ar_account_voucher and go to account_document
-    Account voucher is deleted so we dont care about that, only receiptbook
-    remains
-    """
-    # on v8 we upload reciptbooks as data, now they come from chart account
-    # we delete external ids so they are not deleted
-    logged_query(cr, """
-        DELETE FROM ir_model_data
-        WHERE model in ('account.payment.receiptbook', 'ir.sequence')
-        AND module = 'l10n_ar_account_voucher'
-        """,)
-
-    old_name = 'l10n_ar_account_voucher'
-    new_name = 'account_document'
-    # update data, fields and models
-    update_models_module_name(
-        cr, ['account.voucher.receiptbook'], old_name, new_name)
-
-
 def fix_data_on_l10n_ar_account(cr):
     """
     because in apriori we rename l10n_ar_invoice to account_document, but
-    some things are done on l10n_ar_account, we fix this
+    not some things are done on l10n_ar_account, we fix this
     """
     # pasamos de a account_account a l10n_ar_account
     old_name = 'account_document'
     new_name = 'l10n_ar_account'
 
-    # only update data
     l10n_ar_account_data_models = [
         'afip.responsability.type',
         'account.document.type',
-        'account.payment.term',
-        'account.account.type',
-        'account.fiscal.position',
-        'res.partner',
     ]
-    # update data, fields and models
     l10n_ar_account_models = [
         'afip.responsability.type',
         'afip.incoterm',
         'account.document.letter',
-        # 'account.payment.receiptbook',
+        'account.payment.receiptbook',
     ]
 
     update_data_module_name(
@@ -181,47 +119,20 @@ def fix_data_on_l10n_ar_account(cr):
     update_models_module_name(
         cr, l10n_ar_account_models, old_name, new_name)
 
-    # this fields are on account_document but they are created by
-    # l10n_ar_account
-    fields = [
-        # 'field_afip_document_class_document_letter_id',
-        'field_account_invoice_afip_incoterm_id',
-        'field_account_invoice_afip_service_start',
-        'field_account_invoice_afip_service_end',
-        'field_account_invoice_point_of_sale_type',
-        'field_account_invoice_point_of_sale_number',
-        'field_account_invoice_afip_responsability_type_id',
-        'field_product_uom_afip_code',
-        'field_res_country_afip_code',
-        'field_res_country_cuit_fisica',
-        'field_res_country_cuit_juridica',
-        'field_res_country_cuit_otro',
-        'field_res_currency_afip_code',
-        'field_res_partner_gross_income_number',
-        'field_res_partner_gross_income_type',
-        'field_res_partner_start_date',
-        'field_account_fiscal_position_afip_code',
-    ]
-    xmlid_renames = [(
-        'account_document.%s' % field,
-        'l10n_ar_account.%s' % field) for field in fields]
-    xmlid_renames += [
-        ('account_document.field_afip_document_class_document_letter_id',
-            'l10n_ar_account.field_account_document_type_document_letter_id',),
-        ('account_document.field_afip_document_letter_issuer_ids',
-            'l10n_ar_account.field_account_document_letter_issuer_ids',),
-        ('account_document.field_afip_document_letter_receptor_ids',
-            'l10n_ar_account.field_account_document_letter_receptor_ids',)
-    ]
-    openupgrade.rename_xmlids(cr, xmlid_renames)
 
-    # on v8 fiscal position are created by data and also, in some cases, they
-    # were created without noupdate=trur, so we deelte external ids
-    logged_query(cr, """
-        DELETE FROM ir_model_data
-        WHERE model = 'account.fiscal.position'
-        AND module = 'l10n_ar_account'
-        """,)
+def fix_data_on_l10n_ar_partner(cr):
+    # pasamos de a account_account a l10n_ar_partner
+    old_name = 'account_document'
+    new_name = 'l10n_ar_partner'
+
+    l10n_ar_partner_data_models = [
+        'res.partner',
+        'res.partner.id_category',
+        'res.partner.title',
+    ]
+
+    update_data_module_name(
+        cr, l10n_ar_partner_data_models, old_name, new_name)
 
 
 def update_data_module_name(cr, models, old_name, new_name):

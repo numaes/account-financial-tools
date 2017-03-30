@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
-# For copyright and license notices, see __openerp__.py file in module root
+# For copyright and license notices, see __odoo__.py file in module root
 # directory
 ##############################################################################
-from openerp import models, fields, api
+from odoo import models, fields, api
 import logging
 _logger = logging.getLogger(__name__)
 
 
-class AccountPaymentReceiptbook(models.Model):
+class account_payment_receiptbook(models.Model):
 
     _name = 'account.payment.receiptbook'
     _description = 'Account payment Receiptbook'
@@ -25,16 +25,12 @@ class AccountPaymentReceiptbook(models.Model):
         size=64,
         required=True,
     )
-    partner_type = fields.Selection(
-        [('customer', 'Customer'), ('supplier', 'Vendor')],
+    payment_type = fields.Selection(
+        [('inbound', 'Inbound'), ('outbound', 'Outbound')],
+        # [('receipt', 'Receipt'), ('payment', 'Payment')],
+        string='Type',
         required=True,
     )
-    # payment_type = fields.Selection(
-    #     [('inbound', 'Inbound'), ('outbound', 'Outbound')],
-    #     # [('receipt', 'Receipt'), ('payment', 'Payment')],
-    #     string='Type',
-    #     required=True,
-    # )
     # lo dejamos solo como ayuda para generar o no la secuencia pero lo que
     # termina definiendo si es manual o por secuencia es si tiene secuencia
     sequence_type = fields.Selection(
@@ -82,6 +78,9 @@ class AccountPaymentReceiptbook(models.Model):
         sequence_type = vals.get(
             'sequence_type',
             self._context.get('default_sequence_type', False))
+        payment_type = vals.get(
+            'payment_type',
+            self._context.get('default_payment_type', False))
         prefix = vals.get(
             'prefix',
             self._context.get('default_prefix', False))
@@ -92,7 +91,7 @@ class AccountPaymentReceiptbook(models.Model):
         if (
                 sequence_type == 'automatic' and
                 not vals.get('sequence_id', False) and
-                company_id):
+                company_id and payment_type):
             seq_vals = {
                 'name': vals['name'],
                 'implementation': 'no_gap',
@@ -104,4 +103,4 @@ class AccountPaymentReceiptbook(models.Model):
             vals.update({
                 'sequence_id': sequence.id
             })
-        return super(AccountPaymentReceiptbook, self).create(vals)
+        return super(account_payment_receiptbook, self).create(vals)

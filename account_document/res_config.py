@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from openerp import models, fields, api
-# from openerp.exceptions import UserError
+from odoo import models, fields, api
+# from odoo.exceptions import UserError
 
 
 class WizardMultiChartsAccounts(models.TransientModel):
@@ -45,20 +45,13 @@ class AccountConfigSettings(models.TransientModel):
         'Purchase Use Documents'
     )
     localization = fields.Selection(
-        related='company_id.localization',
-        # readonly=True,
+        related='chart_template_id.localization',
+        readonly=True,
     )
 
     @api.onchange('chart_template_id')
     def account_documentonchange_chart_template(self):
-        # if user already set localization on company we dont want to overwrite
-        # it
-        if not self.localization and self.chart_template_id.localization:
-            self.localization = self.chart_template_id.localization
-
-    @api.onchange('localization')
-    def account_documentonchange_localization(self):
-        if self.localization:
+        if self.chart_template_id.localization:
             self.sale_use_documents = True
             self.purchase_use_documents = True
 

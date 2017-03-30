@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
-# For copyright and license notices, see __openerp__.py file in module root
+# For copyright and license notices, see __odoo__.py file in module root
 # directory
 ##############################################################################
-from openerp import models, api, fields, _
-from openerp.addons.account_document.models.res_company import ResCompany
+from odoo import models, api, fields, _
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -12,13 +11,12 @@ _logger = logging.getLogger(__name__)
 class AccountChartTemplate(models.Model):
     _inherit = 'account.chart.template'
 
-    # _get_localizations = (
-    #     lambda self, *args, **kwargs: self.env[
-    #         'res.company']._get_localizations(*args, **kwargs))
+    _get_localizations = (
+        lambda self, *args, **kwargs: self.env[
+            'res.company']._get_localizations(*args, **kwargs))
 
     localization = fields.Selection(
-        # _get_localizations,
-        ResCompany._localization_selection,
+        _get_localizations,
         'Localization',
         help='If you set the localization here, then when installing '
         'this chart, this localization will be set on company'
@@ -71,13 +69,13 @@ class AccountChartTemplate(models.Model):
         This method can be inherited by different localizations
         """
         receiptbook_data = []
-        partner_type_name_map = {
-            'customer': _('%s Customer Receipts'),
-            'supplier': _('%s Supplier Payments'),
+        payment_types = {
+            'inbound': _('Inbound'),
+            'outbound': _('Outbound'),
         }
         sequence_types = {
-            'automatic': _('Automatic'),
-            'manual': _('Manual'),
+            'automatic': _(''),
+            'manual': _('Manuales'),
         }
         # we use for sequences and for prefix
         sequences = {
@@ -87,16 +85,17 @@ class AccountChartTemplate(models.Model):
         for sequence_type in ['automatic', 'manual']:
             # for internal_type in [
             #        'inbound_payment_voucher', 'outbound_payment_voucher']:
-            for partner_type in ['supplier', 'customer']:
+            for payment_type in ['inbound', 'outbound']:
                 document_type = self.env['account.document.type'].search([
-                    ('internal_type', '=', '%s_payment' % partner_type)
+                    ('internal_type', '=', '%s_payment_voucher' % payment_type)
                 ], limit=1)
                 if not document_type:
                     continue
                 vals = {
-                    'name': partner_type_name_map[partner_type] % (
-                        sequence_types[sequence_type]),
-                    'partner_type': partner_type,
+                    'name': "%s %s" % (
+                        payment_types[payment_type],
+                        sequence_types[sequence_type],),
+                    'payment_type': payment_type,
                     'sequence_type': sequence_type,
                     'padding': 8,
                     'company_id': company.id,

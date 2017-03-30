@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
-# For copyright and license notices, see __openerp__.py file in module root
+# For copyright and license notices, see __odoo__.py file in module root
 # directory
 ##############################################################################
-from openerp import api, models, fields, _
-# from openerp.exceptions import ValidationError
+from odoo import api, models, fields, _
+# from odoo.exceptions import Warning
 
 
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
-    # unreconciled_domain = [('full_reconcile_id', '=', False)]
-    unreconciled_domain = [('reconciled', '=', False)]
+    unreconciled_domain = [('full_reconcile_id', '=', False)]
     receivable_domain = [('type', '=', 'receivable')]
     payable_domain = [('type', '=', 'payable')]
 
@@ -25,9 +24,8 @@ class ResPartner(models.Model):
         'partner_id',
         domain=unreconciled_domain + payable_domain,
     )
-    debt_balance = fields.Monetary(
+    debt_balance = fields.Float(
         compute='_get_debt_balance',
-        currency_field='currency_id',
     )
 
     @api.multi
@@ -64,10 +62,8 @@ class ResPartner(models.Model):
     def _get_debt_report_lines(self, company):
         def get_line_vals(
                 date=None, name=None, detail_lines=None, date_maturity=None,
-                amount=None, amount_residual=None, balance=None,
-                financial_amount=None, financial_amount_residual=None,
-                financial_balance=None,
-                amount_currency=None,
+                amount=None, balance=None, financial_amount=None,
+                financial_balance=None, amount_currency=None,
                 currency_name=None):
             if not detail_lines:
                 detail_lines = []
@@ -77,10 +73,8 @@ class ResPartner(models.Model):
                 'detail_lines': detail_lines,
                 'date_maturity': date_maturity,
                 'amount': amount,
-                'amount_residual': amount_residual,
                 'balance': balance,
                 'financial_amount': financial_amount,
-                'financial_amount_residual': financial_amount_residual,
                 'financial_balance': financial_balance,
                 'amount_currency': amount_currency,
                 'currency_name': currency_name,
@@ -228,29 +222,18 @@ class ResPartner(models.Model):
                 move = record.move_id
                 currency = record.currency_id
             amount = sum(move_lines.mapped('amount'))
-            amount_residual = sum(move_lines.mapped('amount_residual'))
             financial_amount = sum(move_lines.mapped('financial_amount'))
-            financial_amount_residual = sum(move_lines.mapped(
-                'financial_amount_residual'))
             amount_currency = sum(move_lines.mapped('amount_currency'))
-            # si pide historial completo entonces mostramos los movimientos
-            # si no mostramos los saldos
-            if historical_full:
-                balance += amount
-                financial_balance += financial_amount
-            else:
-                balance += amount_residual
-                financial_balance += financial_amount_residual
+            balance += amount
+            financial_balance += financial_amount
             res.append(get_line_vals(
                 date=date,
                 name=display_name,
                 detail_lines=detail_lines,
                 date_maturity=date_maturity,
                 amount=amount,
-                amount_residual=amount_residual,
                 balance=balance,
                 financial_amount=financial_amount,
-                financial_amount_residual=financial_amount_residual,
                 financial_balance=financial_balance,
                 amount_currency=amount_currency,
                 currency_name=currency.name,

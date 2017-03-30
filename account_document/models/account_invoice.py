@@ -1,30 +1,18 @@
 # -*- coding: utf-8 -*-
 ##############################################################################
-# For copyright and license notices, see __openerp__.py file in module root
+# For copyright and license notices, see __odoo__.py file in module root
 # directory
 ##############################################################################
-from openerp import models, fields, api, _
-from openerp.exceptions import UserError
-# import openerp.addons.decimal_precision as dp
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+# import odoo.addons.decimal_precision as dp
 # import re
-from openerp.tools.misc import formatLang
+from odoo.tools.misc import formatLang
 import logging
 _logger = logging.getLogger(__name__)
 
 
 class AccountInvoice(models.Model):
-    """
-    about name_get and display name:
-    * in this model name_get and name_search are re-defined so we overwrite
-    them
-    * we add display_name to replace name field use, we add
-     with search funcion. This field is used then for name_get and name_search
-
-    Acccoding this https://www.odoo.com/es_ES/forum/ayuda-1/question/
-    how-to-override-name-get-method-in-new-api-61228
-    we should modify name_get, we do that by creating a helper display_name
-    field and also overwriting name_get to use it
-    """
     _inherit = "account.invoice"
     _order = "document_number desc, number desc, id desc"
 
@@ -213,9 +201,7 @@ class AccountInvoice(models.Model):
                 self.available_journal_document_type_ids
         ):
             self.journal_document_type_id = (
-                self._get_available_journal_document_types(
-                    self.journal_id, self.type, self.partner_id
-                ).get('journal_document_type'))
+                self.available_journal_document_type_ids[0])
 
     @api.one
     @api.depends(
@@ -268,9 +254,8 @@ class AccountInvoice(models.Model):
         invoice later on action_number
         """
         self.check_use_documents()
-        res = super(AccountInvoice, self).action_move_create()
         self.set_document_data()
-        return res
+        return super(AccountInvoice, self).action_move_create()
 
     @api.multi
     def set_document_data(self):
@@ -351,9 +336,7 @@ class AccountInvoice(models.Model):
         # if invoice is a refund only show credit_notes, else, not credit note
         if invoice_type in ['out_refund', 'in_refund']:
             journal_document_types = journal_document_types.filtered(
-                # lambda x: x.document_type_id.internal_type == 'credit_note')
-                lambda x: x.document_type_id.internal_type in [
-                    'credit_note', 'in_document'])
+                lambda x: x.document_type_id.internal_type == 'credit_note')
         else:
             journal_document_types = journal_document_types.filtered(
                 lambda x: x.document_type_id.internal_type != 'credit_note')
@@ -380,23 +363,3 @@ class AccountInvoice(models.Model):
                     rec.document_number)
                 if res and res != rec.document_number:
                     rec.document_number = res
-
-    @api.multi
-    @api.constrains('type', 'document_type_id')
-    def check_invoice_type_document_type(self):
-        for rec in self:
-            internal_type = rec.document_type_internal_type
-            invoice_type = rec.type
-            if not internal_type:
-                continue
-            elif internal_type in [
-                    'debit_note', 'invoice'] and invoice_type in [
-                    'out_refund', 'in_refund']:
-                raise Warning(_(
-                    'You can not use a % document type with a refund '
-                    'invoice') % internal_type)
-            elif internal_type == 'credit_note' and invoice_type in [
-                    'out_invoice', 'in_invoice']:
-                raise Warning(_(
-                    'You can not use a % document type with a invoice') % (
-                    internal_type))
